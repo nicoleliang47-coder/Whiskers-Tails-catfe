@@ -30,9 +30,15 @@ label{display:block;font-size:13px;color:var(--mute);margin-bottom:10px}input,se
 @media(prefers-color-scheme:dark){.wn{background:#4d2d2b;color:#f3c3bf}}
 .two{display:flex;gap:10px}.two label{flex:1}
 .bt{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.bt.col{flex-direction:column}.ls{font-size:13px;background:var(--bg);border-radius:12px;padding:8px 10px;margin-bottom:10px}.ls div{padding:3px 0}#er{color:var(--redd);font-size:13px;min-height:18px}
+.stg.ph{min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;padding:14px;aspect-ratio:auto}
+body.ph #app{max-width:430px}
+.ph .seat{position:relative;transform:none;width:auto;height:auto;aspect-ratio:auto;border-radius:18px;padding:12px 6px;min-height:92px}
+.ph .tm{position:static;transform:none;margin-top:4px;background:none;padding:0}
 </style></head><body><div id="app"></div><div id="mo"></div>
 <script>
 const $=s=>document.querySelector(s);
+let vw='tab';try{vw=localStorage.getItem('catview')||'tab'}catch(e){}document.body.classList.toggle('ph',vw=='ph');
+function setView(v){vw=v;try{localStorage.setItem('catview',v)}catch(e){}document.body.classList.toggle('ph',v=='ph');stage()}
 const SB_URL='https://fztcmzjypmanmkyjyisc.supabase.co',SB_KEY='sb_publishable_Y-JK3_zjAI81Erah5ZqHHQ_NABoaUSd';
 let S={recs:[],hol:{}},sb=null,DB=false,syn={},subd=false,lt=0;
 try{S=JSON.parse(localStorage.getItem('catseat')||'')||S}catch(e){}
@@ -48,7 +54,7 @@ const lazy=()=>{clearTimeout(lt);lt=setTimeout(load,300)};
 function start(){DB=true;cal();load();if(subd)return;subd=true;
 sb.channel('cat').on('postgres_changes',{event:'*',schema:'public',table:'recs'},lazy).on('postgres_changes',{event:'*',schema:'public',table:'hol'},lazy).subscribe();
 setInterval(load,20000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()})}
-function login(msg){mode='';$('#app').innerHTML=`<div class="card" style="max-width:360px;margin:10vh auto"><h1>🐾 擼貓座位管理</h1><p class="mu">員工登入</p><label>Email<input id="lm" type="email" autocomplete="username" autocapitalize="none" autocorrect="off"></label><label>密碼<input id="lp" type="password" autocomplete="current-password"></label><div id="er">${msg||''}</div><div class="bt"><button onclick="doLogin()">登入</button></div></div>`}
+function login(msg){mode='';$('#app').innerHTML=`<div class="card" style="max-width:360px;margin:10vh auto"><h1>擼貓座位管理</h1><p class="mu">員工登入</p><label>Email<input id="lm" type="email" autocomplete="username" autocapitalize="none" autocorrect="off"></label><label>密碼<input id="lp" type="password" autocomplete="current-password"></label><div id="er">${msg||''}</div><div class="bt"><button onclick="doLogin()">登入</button></div></div>`}
 async function doLogin(){const{error}=await sb.auth.signInWithPassword({email:$('#lm').value.trim(),password:$('#lp').value});if(error)return $('#er').textContent=({'Invalid login credentials':'帳號或密碼錯誤','Email not confirmed':'帳號尚未確認（請在 Supabase 的 Users 按 Confirm user）'})[error.message]||('登入失敗：'+error.message);start()}
 async function boot(){if(!window.supabase){cal();return}sb=supabase.createClient(SB_URL,SB_KEY);
 sb.auth.onAuthStateChange(ev=>{if(ev=='SIGNED_OUT'){DB=false;S={recs:[],hol:{}};syn={};closeM();login()}});
@@ -56,6 +62,7 @@ const{data}=await sb.auth.getSession();data.session?start():login()}
 const CAP={B1:2,B3:2,B5:1,B6:1,B7:1,B8:1,B2:4,B4:3};for(let i=1;i<=18;i++)CAP['A'+i]=i<=6?2:1;
 const POS={A1:[205,628],A2:[430,630],A3:[314,800],A4:[318,936],A5:[212,1090],A6:[437,1091],A7:[670,459],A8:[670,630],A9:[670,766],A10:[670,948],A11:[670,1083],A12:[670,1248],A13:[893,525],A14:[893,658],A15:[893,787],A16:[893,915],A17:[893,1048],A18:[893,1180],B1:[1210,672],B2:[1502,546],B3:[1211,973],B4:[1508,1140],B5:[1803,493],B6:[1803,633],B7:[1803,769],B8:[1803,910]};
 const SLOTS=['11:00','13:00','15:00','17:00','19:00'];
+const hm=x=>{const d=x?new Date(x):new Date();return pad(d.getHours())+':'+pad(d.getMinutes())},tsOf=v=>{const[a,b]=v.split(':'),d=new Date();d.setHours(+a,+b,0,0);return d.getTime()};
 const pad=n=>String(n).padStart(2,'0'),fk=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),today=()=>fk(new Date());
 const hol=k=>k in S.hol?S.hol[k]:[0,6].includes(new Date(k+'T00:00').getDay());
 const lim=r=>hol(r.date)&&r.type==='res'?105:90;
@@ -73,23 +80,23 @@ function cal(){sel='';mode='';const y=cm.getFullYear(),m=cm.getMonth(),f=new Dat
 for(let i=0;i<f;i++)c+='<i></i>';
 for(let d=1;d<=n;d++){const k=y+'-'+pad(m+1)+'-'+pad(d),cnt=S.recs.filter(r=>r.date===k&&r.type==='res'&&!r.cancel).length;
 c+=`<button class="day${hol(k)?' h':''}${k===today()?' t':''}" onclick="pick('${k}')"><b>${d}</b>${cnt?`<span>${cnt} 組預約</span>`:''}</button>`}
-$('#app').innerHTML=`<div class="top"><div><h1>🐾 擼貓座位管理</h1><small>員工登記系統・${sb?`☁️ 即時同步・<a onclick="sb.auth.signOut()" style="cursor:pointer;text-decoration:underline">登出</a>`:'僅存於本機'}</small></div><div><button class="g" onclick="mv(-1)">‹</button> <b>${y} 年 ${m+1} 月</b> <button class="g" onclick="mv(1)">›</button></div></div><div class="card"><div class="wk">${[...WD].map(x=>`<div>${x}</div>`).join('')}</div><div class="grid">${c}</div><p class="mu" style="font-size:12px;margin:10px 0 0">奶茶色底為假日（六日與自訂例假日）。</p></div>`}
+$('#app').innerHTML=`<div class="top"><div><h1>擼貓座位管理</h1><small>員工登記系統・${sb?`<a onclick="sb.auth.signOut()" style="cursor:pointer;text-decoration:underline">登出</a>`:'僅存於本機'}</small></div><div><button class="g" onclick="mv(-1)">‹</button> <b>${y} 年 ${m+1} 月</b> <button class="g" onclick="mv(1)">›</button></div></div><div class="card"><div class="wk">${[...WD].map(x=>`<div>${x}</div>`).join('')}</div><div class="grid">${c}</div><p class="mu" style="font-size:12px;margin:10px 0 0">奶茶色底為假日（六日與自訂例假日）。</p></div>`}
 const mv=d=>{cm=new Date(cm.getFullYear(),cm.getMonth()+d,1);cal()};
 function pick(k){sel=k;const h=hol(k),d=new Date(k+'T00:00');
-modal(`<h3>${k.replace(/-/g,' / ')} 週${WD[d.getDay()]} <small>${h?'假日':'平日'}</small></h3><p class="mu" style="font-size:13px">${h?'現場客 90 分鐘・預約客 105 分鐘':'滿座時限時 90 分鐘'}</p><div class="bt col"><button onclick="go('reserve')">📒 訂位管理</button><button onclick="go('live')">🪑 目前座位</button><button class="g" onclick="setHol('${k}',${!h})">${h?'改為平日':'標記為例假日'}</button></div>`)}
+modal(`<h3>${k.replace(/-/g,' / ')} 週${WD[d.getDay()]} <small>${h?'假日':'平日'}</small></h3><p class="mu" style="font-size:13px">${h?'現場客 90 分鐘・預約客 105 分鐘':'滿座時限時 90 分鐘'}</p><div class="bt col"><button onclick="go('reserve')">訂位管理</button><button onclick="go('live')">目前座位</button><button class="g" onclick="setHol('${k}',${!h})">${h?'改為平日':'標記為例假日'}</button></div>`)}
 function setHol(k,v){S.hol[k]=v;save();closeM();cal()}
 function go(m){closeM();mode=m;fl='A';shell()}
 function shell(){$('#app').innerHTML=`<div class="top"><button class="g" onclick="cal()">‹ 月曆</button><div><b>${sel}</b> <small>${mode=='reserve'?'訂位管理':'目前座位'}</small></div><button class="g" onclick="mode=mode=='reserve'?'live':'reserve';shell()">切換到${mode=='reserve'?'目前座位':'訂位管理'}</button></div>
-<div class="card"><div class="tabs"><button id="tA" onclick="fl='A';stage()">一樓</button><button id="tB" onclick="fl='B';stage()">二樓</button><span class="mu" style="font-size:12px">${mode=='reserve'?'點座位即可新增預約':'點座位入座、轉檯或離席'}</span></div>
+<div class="card"><div class="tabs"><button id="tA" onclick="fl='A';stage()">一樓</button><button id="tB" onclick="fl='B';stage()">二樓</button><span class="mu" style="font-size:12px">${mode=='reserve'?'點座位即可新增預約':'點座位入座、轉檯或離席'}</span><span style="margin-left:auto;display:flex;gap:6px"><button id="vT" onclick="setView('tab')">平板模式</button><button id="vP" onclick="setView('ph')">手機模式</button></span></div>
 <div class="lg"><span><i></i>現場客</span><span><i class="r"></i>預約客</span><span>閃爍＝即將到時／超時</span><span>預約前 2 小時自動鎖位</span></div><div class="sc"><div class="stg" id="stg"></div></div></div>`;stage()}
 function stage(){if(!$('#stg'))return;const B=fl=='B',ox=B?1090:60,oy=380,W=B?840:960,H=B?860:960,sz=(B?112:120)/W*100;
-$('#tA').className=B?'':'on';$('#tB').className=B?'on':'';$('#stg').style.aspectRatio=W+'/'+H;const k=sel,now=Date.now();let h='';
+$('#tA').className=B?'':'on';$('#tB').className=B?'on':'';const ph=vw=='ph';$('#stg').className='stg'+(ph?' ph':'');$('#stg').style.aspectRatio=ph?'auto':W+'/'+H;$('#vT').className=ph?'':'on';$('#vP').className=ph?'on':'';const k=sel,now=Date.now();let h='';
 for(const s in POS){if(s[0]!=fl)continue;const[x,y]=POS[s],rect=!B&&+s.slice(1)>=13;let cl='seat'+(rect?' rect':''),sub=CAP[s]+'人',tm='—';
 if(mode=='reserve'){const l=S.recs.filter(r=>r.date===k&&ss(r).includes(s)&&r.type==='res'&&ok(r)).sort((a,b)=>a.time<b.time?-1:1);if(l.length){cl+=' res';sub=l.slice(0,2).map(r=>r.time+' '+r.name+(r.w?' 併':'')).join('<br>')}tm=l.length?l.length+' 組預約':'可訂位'}
 else{const o=seated(k,s),bs=booked(k,s);
 if(o){const el=Math.floor((now-o.seatedAt)/60000),rm=lim(o)-el;cl+=o.type=='res'?' res':'';cl+=rm<0?' over':rm<=10?' warn':'';sub=o.seat===s?(o.name||'現場')+' '+fp(o):'併 '+o.seat;tm=`入座${el}分・${rm>=0?'剩'+rm:'超'+-rm}分`}
 else if(bs.length){const b=bs[0];if(locked(b)){cl+=' res';sub='🔒'+b.time+'<br>'+(b.seat===s?b.name+' '+fp(b):'併 '+b.seat);tm='預約保留中'}else{cl+=' fut';sub=b.time+' 預約'}}}
-h+=`<div class="${cl}" style="left:${(x-ox)/W*100}%;top:${(y-oy)/H*100}%;width:${rect?15.6:sz}%;${rect?'height:'+(118/H*100)+'%':'aspect-ratio:1'}" onclick="seatClick('${s}')"><b>${s}</b><span>${sub}</span><span class="tm">${tm}</span></div>`}
+const st=ph?'':` style="left:${(x-ox)/W*100}%;top:${(y-oy)/H*100}%;width:${rect?15.6:sz}%;${rect?'height:'+(118/H*100)+'%':'aspect-ratio:1'}"`;h+=`<div class="${cl}"${st} onclick="seatClick('${s}')"><b>${s}</b><span>${sub}</span><span class="tm">${tm}</span></div>`}
 $('#stg').innerHTML=h}
 setInterval(()=>{if(mode=='live'&&$('#mo').style.display!='block')stage()},15000);
 const seatClick=s=>mode=='reserve'?resForm(s):liveSeat(s);
@@ -107,17 +114,17 @@ function cancelR(id){const r=S.recs.find(x=>x.id==id);r.cancel=1;save();closeM()
 const free=(k,t,id)=>!S.recs.some(r=>r.date===k&&r.id!==id&&r.seatedAt&&ok(r)&&ss(r).includes(t))&&!booked(k,t).some(b=>b.id!==id&&locked(b));
 function liveSeat(s){const k=sel,o=seated(k,s),bs=booked(k,s);
 if(o){if(o.seat!==s)return liveSeat(o.seat);const el=Math.floor((Date.now()-o.seatedAt)/60000),all=Object.keys(CAP).filter(t=>free(k,t,o.id)),op=(x)=>all.map(t=>`<option value="${t}"${t==x?' selected':''}>${t}（${CAP[t]}人）</option>`).join('');
-modal(`<h3>${ss(o).join('＋')} <small>${o.type=='res'?'預約客 '+o.name:'現場客'}・${fp(o)}</small></h3><p>已入座 <b>${el}</b> 分鐘／時限 ${lim(o)} 分鐘</p><label>主座位（轉檯）<select id="mv">${op(o.seat)}</select></label><label>併桌（選填）<select id="mw"><option value="">不併桌</option>${op(o.w)}</select></label><div id="er"></div><div class="bt"><button onclick="move('${o.id}')">確定轉檯／併桌</button><button class="g" onclick="leave('${o.id}')">客人離席</button></div>`)}
-else if(bs.length&&locked(bs[0])){const b=bs[0];modal(`<h3>${ss(b).join('＋')} 🔒 <small>預約保留中</small></h3><p>${b.time}・${b.name}・${fp(b)}<br>${b.phone}</p><div class="bt"><button class="g" onclick="cancelR('${b.id}')">取消預約</button><button onclick="seatRes('${b.id}')">客人到了・入座</button></div>`)}
-else modal(`<h3>${s} <small>${CAP[s]} 人座</small></h3>${bs.length?`<p class="mu">此位 ${bs[0].time} 有預約，請於其前 2 小時內使用完畢。</p>`:''}<div class="two"><label>大人<input id="wa" type="number" min="1" value="1"></label>${s[0]=='B'?'':'<label>小孩（12歲以下）<input id="wk" type="number" min="0" value="0"></label>'}</div><label>併桌（選填，同樓層）<select id="ww"><option value="">不併桌</option>${sameFl(s,t=>free(k,t,''))}</select></label><div id="er"></div><div class="bt"><button class="g" onclick="closeM()">取消</button><button onclick="walk('${s}')">入座</button></div>`)}
+modal(`<h3>${ss(o).join('＋')} <small>${o.type=='res'?'預約客 '+o.name:'現場客'}・${fp(o)}</small></h3><p>已入座 <b>${el}</b> 分鐘／時限 ${lim(o)} 分鐘</p><label>入座時間（可修正）<input id="et" type="time" value="${hm(o.seatedAt)}"></label><label>主座位（轉檯）<select id="mv">${op(o.seat)}</select></label><label>併桌（選填）<select id="mw"><option value="">不併桌</option>${op(o.w)}</select></label><div id="er"></div><div class="bt"><button onclick="move('${o.id}')">儲存修改</button><button class="g" onclick="leave('${o.id}')">客人離席</button></div>`)}
+else if(bs.length&&locked(bs[0])){const b=bs[0];modal(`<h3>${ss(b).join('＋')} 🔒 <small>預約保留中</small></h3><p>${b.time}・${b.name}・${fp(b)}<br>${b.phone}</p><label>入座時間（可往前調整）<input id="st" type="time" value="${hm()}"></label><div id="er"></div><div class="bt"><button class="g" onclick="cancelR('${b.id}')">取消預約</button><button onclick="seatRes('${b.id}')">客人到了・入座</button></div>`)}
+else modal(`<h3>${s} <small>${CAP[s]} 人座</small></h3>${bs.length?`<p class="mu">此位 ${bs[0].time} 有預約，請於其前 2 小時內使用完畢。</p>`:''}<div class="two"><label>大人<input id="wa" type="number" min="1" value="1"></label>${s[0]=='B'?'':'<label>小孩（12歲以下）<input id="wk" type="number" min="0" value="0"></label>'}</div><label>併桌（選填，同樓層）<select id="ww"><option value="">不併桌</option>${sameFl(s,t=>free(k,t,''))}</select></label><label>入座時間（可往前調整）<input id="wt" type="time" value="${hm()}"></label><div id="er"></div><div class="bt"><button class="g" onclick="closeM()">取消</button><button onclick="walk('${s}')">入座</button></div>`)}
 function walk(s){const e=m=>$('#er').textContent=m;if(sel!=today())return e('只能在當天登記入座');const a=+$('#wa').value,kk=$('#wk')?(+$('#wk').value||0):0,w=$('#ww').value,p=a+kk;
 if(!(a>=1)||kk<0)return e('大人至少 1 位');if(p>cap(s,w))return e(`最多 ${cap(s,w)} 人`);
-S.recs.push({id:Date.now().toString(36),date:sel,seat:s,w,type:'walk',adult:a,kid:kk,pax:p,seatedAt:Date.now()});save();closeM();stage()}
-function seatRes(id){const r=S.recs.find(x=>x.id==id);r.seatedAt=Date.now();save();closeM();stage()}
+const tv=$('#wt').value,ts=tv?tsOf(tv):0;if(!ts)return e('請填入座時間');if(ts>Date.now()+60000)return e('入座時間不能晚於現在');S.recs.push({id:Date.now().toString(36),date:sel,seat:s,w,type:'walk',adult:a,kid:kk,pax:p,seatedAt:ts});save();closeM();stage()}
+function seatRes(id){const r=S.recs.find(x=>x.id==id),tv=$('#st').value,ts=tv?tsOf(tv):0,e=m=>$('#er').textContent=m;if(sel!=today())return e('只能在當天登記入座');if(!ts)return e('請填入座時間');if(ts>Date.now()+60000)return e('入座時間不能晚於現在');r.seatedAt=ts;save();closeM();stage()}
 function leave(id){S.recs.find(x=>x.id==id).done=Date.now();save();closeM();stage()}
 function move(id){const o=S.recs.find(x=>x.id==id),t=$('#mv').value,w=$('#mw').value,e=m=>$('#er').textContent=m;
 if(w&&w==t)return e('主座位和併桌不能是同一桌');if(w&&w[0]!=t[0])return e('併桌需在同一樓層');if(o.pax>cap(t,w))return e(`容量不足（最多 ${cap(t,w)} 人）`);
 if((t[0]=='B'||w[0]=='B')&&kids(o)>0)return e('二樓不可有 12 歲以下小孩');
-o.seat=t;o.w=w;save();closeM();fl=t[0];stage()}
+const tv=$('#et').value,ts=(tv&&tv!==hm(o.seatedAt))?tsOf(tv):o.seatedAt;if(ts>Date.now()+60000)return e('入座時間不能晚於現在');o.seatedAt=ts;o.seat=t;o.w=w;save();closeM();fl=t[0];stage()}
 boot();
 </script></body></html>
