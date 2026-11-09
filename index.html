@@ -175,7 +175,10 @@ if(!(a>=1)||a+kk>CAP[s])return e(`${s} 最多 ${CAP[s]} 人`);if(!ts)return e('�
 S.recs.push({id:Date.now().toString(36),date:b.date,seat:s,w:[],type:'walk',adult:a,kid:kk,pax:a+kk,seatedAt:ts});b.seat=t;b.w=w;save();closeM();stage()}
 const cn=n=>{const d='零一二三四五六七八九十';return n<=10?d[n]:'十'+d[n-10]};
 let au=null;
-function voiceFor(){try{const vs=speechSynthesis.getVoices(),z=vs.filter(y=>/zh[-_]?TW|cmn[-_]?TW/i.test(y.lang)||/Mei-?Jia|美佳|國語/i.test(y.name));return z.find(y=>/google/i.test(y.name))||z[0]||vs.find(y=>/^zh/i.test(y.lang))||null}catch(e){return null}}
+function voiceFor(){try{const vs=speechSynthesis.getVoices();let sv='';try{sv=localStorage.getItem('catvoice')||''}catch(e){}
+const s=sv&&vs.find(y=>y.name===sv);if(s)return s;
+const z=vs.filter(y=>/zh[-_]?TW|cmn[-_]?TW/i.test(y.lang)||/Mei-?Jia|美佳|國語|台灣|臺灣|Taiwan/i.test(y.name));
+return z.find(y=>/google/i.test(y.name))||z[0]||vs.find(y=>/^(zh|cmn)/i.test(y.lang))||null}catch(e){return null}}
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
 function speak(x,done){let started=false,g=false,err='',n=0;try{n=speechSynthesis.getVoices().length}catch(e){}
 const bad=m=>done('沒有可用的語音（'+m+'；語音數 '+n+'），請按首頁「語音測試」');
@@ -185,10 +188,10 @@ try{if(au)au.pause();speechSynthesis.cancel();const u=new SpeechSynthesisUtteran
 const ok=()=>{if(started)return;started=true;done('語音：'+(v?v.name:'預設中文'))};
 u.onstart=ok;u.onerror=ev=>{err=ev.error||'錯誤';web()};speechSynthesis.speak(u);
 setTimeout(()=>{if(speechSynthesis.speaking||speechSynthesis.pending)ok()},600);setTimeout(()=>{if(!started)web()},2500)}catch(e){err=e.message;web()}}
-function vtest(){let vs=[];try{vs=speechSynthesis.getVoices()}catch(e){}const z=vs.filter(y=>/^zh|cmn|chinese|中文|國語/i.test(y.lang+' '+y.name));
-modal(`<h3>語音測試</h3><p class="mu" style="font-size:13px;line-height:1.7">瀏覽器：${esc(navigator.userAgent.slice(0,110))}<br>支援語音：${'speechSynthesis' in window?'是':'否'}<br>全部語音：${vs.length} 個<br>中文語音：${z.length?z.map(y=>esc(y.name+'（'+y.lang+'）')).join('、'):'沒有'}</p><div id="er" style="color:var(--ink)"></div><div class="bt"><button class="g" onclick="closeM()">關閉</button><button onclick="speak('擼貓廣播 語音測試',m=>{const e=$('#er');if(e)e.textContent=m})">測試播放</button></div>`)}
+function vtest(){let vs=[];try{vs=speechSynthesis.getVoices()}catch(e){}const z=vs.filter(y=>/^(zh|cmn|yue)/i.test(y.lang)||/中文|國語|普通話|Chinese|Mandarin/i.test(y.name)),cur=voiceFor(),cn_=cur?cur.name:'';
+modal(`<h3>語音測試</h3><p class="mu" style="font-size:13px;line-height:1.7">瀏覽器：${esc(navigator.userAgent.slice(0,110))}<br>全部語音：${vs.length} 個；中文語音：${z.length} 個</p>${z.length?`<label>使用的語音（選好後按測試播放，會自動記住）<select onchange="try{localStorage.setItem('catvoice',this.value)}catch(e){}">${z.map(y=>`<option value="${esc(y.name)}"${y.name==cn_?' selected':''}>${esc(y.name)}（${esc(y.lang)}）</option>`).join('')}</select></label>`:'<div class="wn">平板裡找不到中文語音，聲音會像是中文放在英文語音裡。請到平板設定 → 文字轉語音輸出 → Google 文字轉語音引擎 → 安裝語音資料，下載「中文（台灣）」。</div>'}<div id="er" style="color:var(--ink)"></div><div class="bt"><button class="g" onclick="closeM()">關閉</button><button onclick="speak('擼貓廣播 請一樓七號桌的客人至一樓用餐',m=>{const e=$('#er');if(e)e.textContent=m})">測試播放</button></div>`)}
 function bcast(s,k){const f=s[0]=='B'?'二樓':'一樓',n=cn(+s.slice(1))+'號桌';
-const x=k=='late'?`擼貓廣播 提醒${f}（${n}）的客人用餐時間已到 還請留意時間 謝謝您`:(s[0]=='B'?`擼貓廣播 請二樓（${n}）的客人至一樓取餐`:`擼貓廣播 請一樓（${n}）的客人至一樓用餐`);
+const x=k=='late'?`擼貓廣播 提醒${f}${n}的客人用餐時間已到 還請留意時間 謝謝您`:(s[0]=='B'?`擼貓廣播 請二樓${n}的客人至一樓取餐`:`擼貓廣播 請一樓${n}的客人至一樓用餐`);
 const e=$('#er');if(e)e.textContent='廣播中…';speak(x,m=>{const e=$('#er');if(e)e.textContent=m+'：'+x})}
 function jump(s){fl=s[0];stage();liveSeat(s)}
 function rl(){const el=$('#rl');if(!el)return;const k=sel,now=Date.now(),td=k==today(),L=S.recs.filter(r=>r.date===k&&r.type==='res'&&ok(r)).sort((a,b)=>a.time<b.time?-1:1);
