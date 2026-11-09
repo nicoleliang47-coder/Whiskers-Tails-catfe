@@ -44,6 +44,7 @@ button.sm.g{background:var(--acc2);color:var(--ink)}.bd{background:var(--redd);c
 body.aid #aid{display:block}body.aid #app{padding-bottom:200px}
 .ck{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1.5px solid var(--line);border-radius:12px;padding:6px 10px;margin:0 6px 6px 0;font-size:13px;color:var(--ink)}
 .ck input{display:inline-block;width:18px;height:18px;min-height:0;padding:0;margin:0}.ck small{color:var(--acc)}.cks{margin-top:4px}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.hd h3{margin:0 0 10px}.hb{display:flex;gap:6px;flex-shrink:0}.hb button{padding:6px 12px;font-size:13px;border-radius:12px;background:var(--redd)}
 </style></head><body><div id="app"></div><div id="mo"></div>
 <script>
 const $=s=>document.querySelector(s);
@@ -172,6 +173,14 @@ function doSwap(id){const b=S.recs.find(x=>x.id==id),s=b.seat,t=$('#sw1').value,
 if(sel!=today())return e('只能在當天登記入座');if(!t)return e('沒有可改排的座位');if(b.pax>cap(t,w))return e(`預約客容量不足（最多 ${cap(t,w)} 人）`);if(kids(b)>0&&(t[0]=='B'||w.some(x=>x[0]=='B')))return e('有小孩不能安排二樓');
 if(!(a>=1)||a+kk>CAP[s])return e(`${s} 最多 ${CAP[s]} 人`);if(!ts)return e('請填入座時間');if(ts>Date.now()+60000)return e('入座時間不能晚於現在');
 S.recs.push({id:Date.now().toString(36),date:b.date,seat:s,w:[],type:'walk',adult:a,kid:kk,pax:a+kk,seatedAt:ts});b.seat=t;b.w=w;save();closeM();stage()}
+const cn=n=>{const d='零一二三四五六七八九十';return n<=10?d[n]:'十'+d[n-10]};
+let au=null;
+function fb(x){try{const u=new SpeechSynthesisUtterance(x);u.lang='zh-TW';const v=speechSynthesis.getVoices().filter(y=>/zh[-_]TW|cmn/i.test(y.lang));u.voice=v.find(y=>/google/i.test(y.name))||v[0]||null;u.rate=.95;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function speak(x){try{speechSynthesis.cancel()}catch(e){}if(au){au.pause();au=null}
+const a=new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-TW&q='+encodeURIComponent(x));au=a;a.onerror=()=>fb(x);const p=a.play();if(p&&p.catch)p.catch(()=>fb(x))}
+function bcast(s,k){const f=s[0]=='B'?'二樓':'一樓',n=cn(+s.slice(1))+'號桌';
+const x=k=='late'?`擼貓廣播 提醒${f}（${n}）的客人用餐時間已到 還請留意時間 謝謝您`:(s[0]=='B'?`擼貓廣播 請二樓（${n}）的客人至一樓取餐`:`擼貓廣播 請一樓（${n}）的客人至一樓用餐`);
+speak(x);const e=$('#er');if(e)e.textContent='廣播中：'+x}
 function jump(s){fl=s[0];stage();liveSeat(s)}
 function rl(){const el=$('#rl');if(!el)return;const k=sel,now=Date.now(),td=k==today(),L=S.recs.filter(r=>r.date===k&&r.type==='res'&&ok(r)).sort((a,b)=>a.time<b.time?-1:1);
 const need=L.filter(r=>!r.seat&&!r.seatedAt&&td&&now>=at(r)-LK).length;
@@ -189,7 +198,7 @@ function cancelR(id){const r=S.recs.find(x=>x.id==id);r.cancel=1;save();closeM()
 const free=(k,t,id)=>!S.recs.some(r=>r.date===k&&r.id!==id&&r.seatedAt&&ok(r)&&ss(r).includes(t))&&!booked(k,t).some(b=>b.id!==id&&locked(b));
 function liveSeat(s){const k=sel,o=seated(k,s),bs=booked(k,s);
 if(o){if(o.seat!==s)return liveSeat(o.seat);const el=Math.floor((Date.now()-o.seatedAt)/60000),all=SEATS.filter(t=>free(k,t,o.id)).sort(ordF(o.seat[0])),op=(x)=>all.map(t=>`<option value="${t}"${t==x?' selected':''}>${t}（${CAP[t]}人）</option>`).join('');
-modal(`<h3>${sl(o).join('＋')} <small>${o.type=='res'?'預約客 '+o.name:'現場客'}・${fp(o)}</small></h3><p>已入座 <b>${el}</b> 分鐘${limOn(o)?'／時限 '+lim(o)+' 分鐘':'（目前未客滿，不限時）'}</p><label>入座時間（可修正）<input id="et" type="time" value="${hm(o.seatedAt)}"></label><label>主座位（轉檯）<select id="mv" onchange="refCk('mw')">${op(o.seat)}</select></label>${ckBox('mw',{main:'mv',m0:o.seat,av:all},wl(o))}<div id="er"></div><div class="bt"><button onclick="move('${o.id}')">儲存修改</button><button class="g" onclick="leave('${o.id}')">客人離席</button></div>`)}
+modal(`<div class="hd"><h3>${sl(o).join('＋')} <small>${o.type=='res'?'預約客 '+o.name:'現場客'}・${fp(o)}</small></h3><div class="hb"><button class="od" style="background:#7d9bb8" onclick="bcast('${o.seat}','late')">逾時</button><button class="od" onclick="bcast('${o.seat}','call')">${o.seat[0]=='B'?'取餐':'用餐'}</button></div></div><p>已入座 <b>${el}</b> 分鐘${limOn(o)?'／時限 '+lim(o)+' 分鐘':'（目前未客滿，不限時）'}</p><label>入座時間（可修正）<input id="et" type="time" value="${hm(o.seatedAt)}"></label><label>主座位（轉檯）<select id="mv" onchange="refCk('mw')">${op(o.seat)}</select></label>${ckBox('mw',{main:'mv',m0:o.seat,av:all},wl(o))}<div id="er"></div><div class="bt"><button onclick="move('${o.id}')">儲存修改</button><button class="g" onclick="leave('${o.id}')">客人離席</button></div>`)}
 else if(bs.length&&locked(bs[0]))bookModal(bs[0].id);
 else modal(`<h3>${s} <small>${CAP[s]} 人座</small></h3>${bs.length?`<p class="mu">此位 ${bs[0].time} 有預約，請在預約前 2 小時以前使用完畢。</p>`:''}<div class="two"><label>大人<input id="wa" type="number" min="1" value="1"></label>${s[0]=='B'?'':'<label>小孩（12歲以下）<input id="wk" type="number" min="0" value="0"></label>'}</div>${ckBox('ckw',{m0:s,av:SEATS.filter(t=>free(k,t,''))},[])}<label style="margin-top:8px">入座時間（可往前調整）<input id="wt" type="time" value="${hm()}"></label><div id="er"></div><div class="bt"><button class="g" onclick="closeM()">取消</button><button onclick="walk('${s}')">入座</button></div>`)}
 function walk(s){const e=m=>$('#er').textContent=m;if(sel!=today())return e('只能在當天登記入座');const a=+$('#wa').value,kk=$('#wk')?(+$('#wk').value||0):0,w=ckVal('ckw'),p=a+kk;
