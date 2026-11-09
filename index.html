@@ -184,7 +184,7 @@ function speak(x,done){let started=false,g=false,err='',n=0;try{n=speechSynthesi
 const bad=m=>done('沒有可用的語音（'+m+'；語音數 '+n+'），請按首頁「語音測試」');
 const web=()=>{if(g||started)return;g=true;try{speechSynthesis.cancel()}catch(e){}
 try{if(au)au.pause();const a=new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-TW&q='+encodeURIComponent(x));au=a;a.onplaying=()=>done('Google 翻譯語音');a.onerror=()=>bad(err||'備用語音失敗');const p=a.play();if(p&&p.catch)p.catch(()=>bad(err||'備用語音被擋'))}catch(e){bad('不支援')}};
-try{if(au)au.pause();speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(x),v=voiceFor();u.lang='zh-TW';if(v)u.voice=v;u.rate=.95;u.volume=1;
+try{if(au)au.pause();speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(x),v=voiceFor();u.lang='zh-TW';if(v)u.voice=v;u.rate=.85;u.volume=1;
 const ok=()=>{if(started)return;started=true;done('語音：'+(v?v.name:'預設中文'))};
 u.onstart=ok;u.onerror=ev=>{err=ev.error||'錯誤';web()};speechSynthesis.speak(u);
 setTimeout(()=>{if(speechSynthesis.speaking||speechSynthesis.pending)ok()},600);setTimeout(()=>{if(!started)web()},2500)}catch(e){err=e.message;web()}}
