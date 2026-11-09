@@ -176,13 +176,12 @@ S.recs.push({id:Date.now().toString(36),date:b.date,seat:s,w:[],type:'walk',adul
 const cn=n=>{const d='零一二三四五六七八九十';return n<=10?d[n]:'十'+d[n-10]};
 let au=null;
 function voiceFor(){try{const vs=speechSynthesis.getVoices(),z=vs.filter(y=>/zh[-_]?TW|cmn[-_]?TW/i.test(y.lang)||/Mei-?Jia|美佳|國語/i.test(y.name));return z.find(y=>/google/i.test(y.name))||z[0]||vs.find(y=>/^zh/i.test(y.lang))||null}catch(e){return null}}
-function speak(x,done){let ok=false,fell=false;
-const sys=()=>{if(fell||ok)return;fell=true;try{if(au)au.pause()}catch(e){}
-try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(x),v=voiceFor();u.lang='zh-TW';if(v)u.voice=v;u.rate=.95;u.volume=1;
-u.onstart=()=>done('系統語音（'+(v?v.name:'預設')+'）');u.onerror=ev=>done('語音失敗（'+(ev.error||'未知')+'），請檢查靜音開關與音量');speechSynthesis.speak(u);done('系統語音播放中')}catch(e){done('這個瀏覽器不支援語音')}};
-try{speechSynthesis.cancel();const z=new SpeechSynthesisUtterance(' ');z.volume=0;speechSynthesis.speak(z)}catch(e){}
-try{if(au)au.pause();const a=new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-TW&q='+encodeURIComponent(x));au=a;a.onplaying=()=>{ok=true;done('Google 語音')};a.onerror=sys;const p=a.play();if(p&&p.catch)p.catch(sys)}catch(e){sys()}
-setTimeout(()=>{if(!ok)sys()},1500)}
+try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
+function speak(x,done){let started=false,g=false;
+const web=()=>{if(g||started)return;g=true;try{speechSynthesis.cancel()}catch(e){}
+try{if(au)au.pause();const a=new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-TW&q='+encodeURIComponent(x));au=a;a.onplaying=()=>done('Google 翻譯語音');a.onerror=()=>done('沒有可用的語音，請檢查設定');const p=a.play();if(p&&p.catch)p.catch(()=>done('沒有可用的語音，請檢查設定'))}catch(e){done('這個瀏覽器不支援語音')}};
+try{if(au)au.pause();speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(x),v=voiceFor();u.lang='zh-TW';if(v)u.voice=v;u.rate=.95;u.volume=1;
+u.onstart=()=>{started=true;done('語音：'+(v?v.name:'預設中文'))};u.onerror=()=>web();speechSynthesis.speak(u);setTimeout(()=>{if(!started)web()},2500)}catch(e){web()}}
 function bcast(s,k){const f=s[0]=='B'?'二樓':'一樓',n=cn(+s.slice(1))+'號桌';
 const x=k=='late'?`擼貓廣播 提醒${f}（${n}）的客人用餐時間已到 還請留意時間 謝謝您`:(s[0]=='B'?`擼貓廣播 請二樓（${n}）的客人至一樓取餐`:`擼貓廣播 請一樓（${n}）的客人至一樓用餐`);
 const e=$('#er');if(e)e.textContent='廣播中…';speak(x,m=>{const e=$('#er');if(e)e.textContent=m+'：'+x})}
