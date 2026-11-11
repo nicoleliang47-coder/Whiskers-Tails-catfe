@@ -180,7 +180,7 @@ const s=sv&&vs.find(y=>y.name===sv);if(s)return s;
 const z=vs.filter(y=>/zh[-_]?TW|cmn[-_]?TW/i.test(y.lang)||/Mei-?Jia|美佳|國語|台灣|臺灣|Taiwan/i.test(y.name));
 return z.find(y=>/google/i.test(y.name))||z[0]||vs.find(y=>/^(zh|cmn)/i.test(y.lang))||null}catch(e){return null}}
 try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}catch(e){}
-function speak(x,done){let started=false,g=false,err='',n=0;try{n=speechSynthesis.getVoices().length}catch(e){}
+function sysSpeak(x,done){let started=false,g=false,err='',n=0;try{n=speechSynthesis.getVoices().length}catch(e){}
 const bad=m=>done('沒有可用的語音（'+m+'；語音數 '+n+'），請按首頁「語音測試」');
 const web=()=>{if(g||started)return;g=true;try{speechSynthesis.cancel()}catch(e){}
 try{if(au)au.pause();const a=new Audio('https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-TW&q='+encodeURIComponent(x));au=a;a.onplaying=()=>done('Google 翻譯語音');a.onerror=()=>bad(err||'備用語音失敗');const p=a.play();if(p&&p.catch)p.catch(()=>bad(err||'備用語音被擋'))}catch(e){bad('不支援')}};
@@ -189,10 +189,19 @@ const ok=()=>{if(started)return;started=true;done('語音：'+(v?v.name:'預設�
 u.onstart=ok;u.onerror=ev=>{err=ev.error||'錯誤';web()};speechSynthesis.speak(u);
 setTimeout(()=>{if(speechSynthesis.speaking||speechSynthesis.pending)ok()},600);setTimeout(()=>{if(!started)web()},2500)}catch(e){err=e.message;web()}}
 function vtest(){let vs=[];try{vs=speechSynthesis.getVoices()}catch(e){}const z=vs.filter(y=>/^(zh|cmn|yue)/i.test(y.lang)||/中文|國語|普通話|Chinese|Mandarin/i.test(y.name)),cur=voiceFor(),cn_=cur?cur.name:'';
-modal(`<h3>語音測試</h3><p class="mu" style="font-size:13px;line-height:1.7">瀏覽器：${esc(navigator.userAgent.slice(0,110))}<br>全部語音：${vs.length} 個；中文語音：${z.length} 個</p>${z.length?`<label>使用的語音（選好後按測試播放，會自動記住）<select onchange="try{localStorage.setItem('catvoice',this.value)}catch(e){}">${z.map(y=>`<option value="${esc(y.name)}"${y.name==cn_?' selected':''}>${esc(y.name)}（${esc(y.lang)}）</option>`).join('')}</select></label>`:'<div class="wn">平板裡找不到中文語音，聲音會像是中文放在英文語音裡。請到平板設定 → 文字轉語音輸出 → Google 文字轉語音引擎 → 安裝語音資料，下載「中文（台灣）」。</div>'}<div id="er" style="color:var(--ink)"></div><div class="bt"><button class="g" onclick="closeM()">關閉</button><button onclick="speak('擼貓廣播 請一樓七號桌的客人至一樓用餐',m=>{const e=$('#er');if(e)e.textContent=m})">測試播放</button></div>`)}
-function bcast(s,k){const f=s[0]=='B'?'二樓':'一樓',n=cn(+s.slice(1))+'號桌';
-const x=k=='late'?`擼貓廣播 提醒${f}${n}的客人用餐時間已到 請留意時間 謝謝您`:(s[0]=='B'?`擼貓廣播 請二樓${n}的客人至一樓取餐`:`擼貓廣播 請一樓${n}的客人至一樓用餐`);
-const e=$('#er');if(e)e.textContent='廣播中…';speak(x,m=>{const e=$('#er');if(e)e.textContent=m+'：'+x})}
+modal(`<h3>語音測試</h3><p class="mu" style="font-size:13px;line-height:1.7">瀏覽器：${esc(navigator.userAgent.slice(0,110))}<br>全部語音：${vs.length} 個；中文語音：${z.length} 個</p>${z.length?`<label>使用的語音（選好後按測試播放，會自動記住）<select onchange="try{localStorage.setItem('catvoice',this.value)}catch(e){}">${z.map(y=>`<option value="${esc(y.name)}"${y.name==cn_?' selected':''}>${esc(y.name)}（${esc(y.lang)}）</option>`).join('')}</select></label>`:'<div class="wn">平板裡找不到中文語音，聲音會像是中文放在英文語音裡。請到平板設定 → 文字轉語音輸出 → Google 文字轉語音引擎 → 安裝語音資料，下載「中文（台灣）」。</div>'}<label style="margin-top:10px">Google 雲端語音金鑰（選填，設定後各平板的聲音一致）<input id="gk" type="text" value="${esc(gk())}" placeholder="貼上 API 金鑰" autocapitalize="none" autocorrect="off"></label><div class="bt" style="justify-content:flex-start;margin-bottom:6px"><button class="g" onclick="saveGk()">儲存金鑰</button><button class="g" onclick="preload()">預先下載全部廣播</button></div><div id="pl" class="mu" style="font-size:13px;margin-bottom:8px"></div><div id="er" style="color:var(--ink)"></div><div class="bt"><button class="g" onclick="closeM()">關閉</button><button onclick="speak('擼貓廣播 請一樓七號桌的客人至一樓用餐',m=>{const e=$('#er');if(e)e.textContent=m})">測試播放</button></div>`)}
+const gk=()=>{try{return localStorage.getItem('catgkey')||''}catch(e){return ''}};
+async function cloudAudio(x){const k='catau:'+x;let b=null;try{b=localStorage.getItem(k)}catch(e){}
+if(!b){const r=await fetch('https://texttospeech.googleapis.com/v1/text:synthesize?key='+encodeURIComponent(gk()),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input:{text:x},voice:{languageCode:'cmn-TW',name:'cmn-TW-Wavenet-A'},audioConfig:{audioEncoding:'MP3',speakingRate:.9}})});
+const j=await r.json();if(!r.ok||!j.audioContent)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));b=j.audioContent;try{localStorage.setItem(k,b)}catch(e){}}
+return b}
+function speak(x,done){if(!gk())return sysSpeak(x,done);try{speechSynthesis.cancel();if(au)au.pause()}catch(e){}
+cloudAudio(x).then(b=>{const a=new Audio('data:audio/mp3;base64,'+b);au=a;a.onplaying=()=>done('Google 雲端語音');return a.play()}).catch(err=>{done('雲端語音失敗（'+err.message+'），改用平板語音');sysSpeak(x,m=>done(m))})}
+function saveGk(){try{localStorage.setItem('catgkey',$('#gk').value.trim())}catch(e){}$('#pl').textContent=$('#gk').value.trim()?'已儲存。可按「預先下載全部廣播」，之後不用每次連線。':'已清除金鑰，改用平板內建語音。'}
+async function preload(){const st=$('#pl');if(!gk()){st.textContent='請先貼上金鑰並按儲存';return}const all=[];SEATS.forEach(s=>['call','late'].forEach(k=>all.push(bmsg(s,k))));let n=0;
+for(const x of all){try{await cloudAudio(x)}catch(e){st.textContent='失敗：'+e.message;return}n++;st.textContent=`已下載 ${n}/${all.length}`}st.textContent='全部下載完成，之後廣播不需要連線到 Google'}
+function bmsg(s,k){const f=s[0]=='B'?'二樓':'一樓',n=cn(+s.slice(1))+'號桌';return k=='late'?`擼貓廣播 提醒${f}${n}的客人用餐時間已到 請留意時間 謝謝您`:(s[0]=='B'?`擼貓廣播 請二樓${n}的客人至一樓取餐`:`擼貓廣播 請一樓${n}的客人至一樓用餐`)}
+function bcast(s,k){const x=bmsg(s,k),e=$('#er');if(e)e.textContent='廣播中…';speak(x,m=>{const e=$('#er');if(e)e.textContent=m+'：'+x})}
 function jump(s){fl=s[0];stage();liveSeat(s)}
 function rl(){const el=$('#rl');if(!el)return;const k=sel,now=Date.now(),td=k==today(),L=S.recs.filter(r=>r.date===k&&r.type==='res'&&ok(r)).sort((a,b)=>a.time<b.time?-1:1);
 const need=L.filter(r=>!r.seat&&!r.seatedAt&&td&&now>=at(r)-LK).length;
